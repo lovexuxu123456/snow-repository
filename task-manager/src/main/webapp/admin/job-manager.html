@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>定时任务管理</title>
+    <meta content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" name="viewport">
+    <link rel="stylesheet" href="../plugins/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../plugins/adminLTE/css/AdminLTE.css">
+    <link rel="stylesheet" href="../plugins/adminLTE/css/skins/_all-skins.min.css">
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="../plugins/jquery/jquery-2.2.3.min.js"></script>
+    <script src="../plugins/bootstrap/js/bootstrap.min.js"></script>
+
+    <script type="text/javascript" src="../plugins/angularjs/angular.min.js"></script>
+    <!-- 分页组件开始 -->
+    <script src="../plugins/angularjs/pagination.js"></script>
+    <link rel="stylesheet" href="../plugins/angularjs/pagination.css">
+    <!-- 分页组件结束 -->
+    <script type="text/javascript" src="../js/base_pagination.js"></script>
+    <script type="text/javascript" src="../js/service/jobService.js"></script>
+    <script type="text/javascript" src="../js/service/jobListenerService.js"></script>
+    <script type="text/javascript" src="../js/controller/baseController.js"></script>
+    <script type="text/javascript" src="../js/controller/jobController.js"></script>
+</head>
+<body class="hold-transition skin-red sidebar-mini" ng-app="hbtrust" ng-controller="jobController" ng-init="findAll()">
+<!-- .box-body -->
+<div class="box-header with-border">
+    <h3 class="box-title">定时任务管理</h3>
+</div>
+
+<div class="box-body">
+    <!-- 数据表格 -->
+    <div class="table-box">
+        <!--工具栏-->
+        <div class="pull-left">
+            <div class="form-group form-inline">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default" title="新建" data-toggle="modal"
+                            data-target="#editModal" ng-click="entity={}"><i class="fa fa-file-o"></i> 新建
+                    </button>
+                    <button type="button" class="btn btn-default" title="删除" ng-click="dele()"><i
+                            class="fa fa-trash-o"></i> 删除
+                    </button>
+                    <button type="button" class="btn btn-default" title="刷新" onclick="window.location.reload();"><i
+                            class="fa fa-refresh"></i> 刷新
+                    </button>
+                    <button type="button" class="btn btn-default" title="增加邮件提醒" ng-click="addMailListener()"><i
+                            class="fa fa-refresh"></i> 增加邮件提醒
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="box-tools pull-right">
+            <div class="has-feedback">
+            </div>
+        </div>
+        <!--工具栏/-->
+
+        <!--数据列表-->
+        <table id="dataList" class="table table-bordered table-striped table-hover dataTable">
+            <thead>
+            <tr>
+                <th class="" style="padding-right:0px">
+                    <input id="selall" type="checkbox" class="icheckbox_square-blue">
+                </th>
+                <th class="sorting">JobKey</th>
+                <th class="sorting">组名</th>
+                <th class="sorting">任务类名</th>
+                <th class="sorting">状态</th>
+                <th class="sorting">操作</th>
+            </tr>
+            </thead>
+            <tbody>
+
+            <tr ng-repeat="entity in list">
+                <td><input type="checkbox" ng-click="updateSelection($event,entity)"></td>
+                <td>
+                    {{entity.jobKey}}
+                </td>
+                <td>{{entity.jobGroup}}</td>
+                <td>{{ entity.jobClassName }}</td>
+                <td>
+                    <a ng-if="entity.triggerState == 'NORMAL'" href="javascript:;" class="btn btn-success">
+                        {{ getState(entity.triggerState) }}
+                    </a>
+                    <a ng-if="entity.triggerState == 'PAUSED'" href="javascript:;" class="btn btn-default disabled">
+                        {{ getState(entity.triggerState) }}
+                    </a>
+                    <a ng-if="entity.triggerState == 'NONE'" href="javascript:;" class="btn btn-default disabled">
+                        {{ getState(entity.triggerState) }}</a>
+
+                    <a ng-if="entity.triggerState == 'BLOCKED'" href="javascript:;" class="btn btn-warning">
+                        {{ getState(entity.triggerState) }}
+                    </a>
+                    <a ng-if="entity.triggerState == 'ERROR'" href="javascript:;" class="btn btn-danger">
+                        {{ getState(entity.triggerState) }}
+                    </a>
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-primary  btn-xs"
+                            ng-click="show(entity)">详细
+                    </button>
+                    <button type="button" class="btn btn-default bg-olive btn-xs" data-toggle="modal"
+                            data-target="#editModal"
+                            ng-click="toEdit(entity)">修改
+                    </button>
+                    <button ng-if="entity.triggerState == 'NORMAL'" type="button" class="btn btn-warning  btn-xs"
+                            ng-click="pause(entity)">暂停
+                    </button>
+                    <button ng-if="entity.triggerState == 'PAUSED'"  type="button" class="btn btn-warning  btn-xs"
+                            ng-click="resume(entity)">恢复
+                    </button>
+                    <button type="button" class="btn btn-danger  btn-xs"
+                            ng-click="start(entity)">立即执行
+                    </button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <!--数据列表/-->
+    </div>
+</div>
+<!-- /.box-body -->
+
+
+<!-- 触发模态框的按钮定义-->
+
+<button type="button" id="show-view" class="btn btn-danger  btn-xs hidden" data-toggle="modal" data-target="#viewModal">
+    触发详细
+</button>
+
+<button type="button" id="add-email-listener" class="btn btn-danger  btn-xs hidden" data-toggle="modal"
+        data-target="#addEmailListenerModal">触发增加邮件
+</button>
+<!-- 触发模态框的按钮定义-->
+
+<!-- 编辑窗口 -->
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h3 id="myModalLabel">编辑</h3>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">完整类名：</label>
+                    <div class="col-sm-9">
+                        <input type="text" class="form-control" name="jobClassName" ng-model="entity.jobClassName"
+                               placeholder="Class Name" required>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">任务组名：</label>
+                    <div class="col-sm-9">
+                        <input class="form-control" name="jobGroup" ng-model="entity.jobGroup" placeholder="Job Group"
+                               required>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">Cron表达式：</label>
+                    <div class="col-sm-9">
+                        <input class="form-control" name="cronExpression" ng-model="entity.cronExpression"
+                               placeholder="Cron Expression" required>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">任务描述：</label>
+                    <div class="col-sm-9">
+                        <input class="form-control" name="description" ng-model="entity.description"
+                               placeholder="Description" # required>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-success" data-dismiss="modal" aria-hidden="true" ng-click="save()">保存</button>
+                <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="viewModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog" style="width: 680px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h3 id="myModalLabel">任务详细信息</h3>
+            </div>
+            <div class="modal-body">
+
+                <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">Key：</label>
+                    <div class="col-sm-9">
+                        <input type="text" class="form-control" disabled name="jobClassName" ng-model="entity.jobKey"
+                               placeholder="Class Name" required>
+                    </div>
+                </div>
+
+                <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">状态：</label>
+
+                    <div class="col-sm-9">
+                        <div class="progress progress-striped active" ng-if="entity.triggerState == 'NORMAL'">
+                            <div class="progress-bar progress-bar-success" role="progressbar"
+                                 aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"
+                                 style="width: 100%;">
+                                <span class="sr-only">{{ getState(entity.triggerState) }}</span>
+                            </div>
+                        </div>
+
+                        <div class="progress progress-striped active" ng-if="entity.triggerState == 'PAUSED'">
+                            <div class="progress-bar progress-bar-warning" role="progressbar"
+                                 aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"
+                                 style="width: 100%;">
+                                <span class="sr-only">{{ getState(entity.triggerState) }}</span>
+                            </div>
+                        </div>
+
+                        <div class="progress progress-striped active" ng-if="entity.triggerState == 'NONE'">
+                            <div class="progress-bar progress-bar-warning" role="progressbar"
+                                 aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"
+                                 style="width: 100%;">
+                                <span class="sr-only">{{ getState(entity.triggerState) }}</span>
+                            </div>
+                        </div>
+
+                        <div class="progress progress-striped active" ng-if="entity.triggerState == 'BLOCKED'">
+                            <div class="progress-bar progress-bar-warning" role="progressbar"
+                                 aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"
+                                 style="width: 100%;">
+                                <span class="sr-only">{{ getState(entity.triggerState) }}</span>
+                            </div>
+                        </div>
+
+                        <div class="progress progress-striped active" ng-if="entity.triggerState == 'ERROR'">
+                            <div class="progress-bar progress-bar-danger" role="progressbar"
+                                 aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"
+                                 style="width: 100%;">
+                                <span class="sr-only">{{ getState(entity.triggerState) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">任务组名：</label>
+                    <div class="col-sm-9">
+                        <input class="form-control" disabled name="jobGroup" value="" ng-model="entity.jobGroup"
+                               placeholder="Job Group" required>
+                    </div>
+                </div>
+
+                <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">完整类名：</label>
+                    <div class="col-sm-9">
+                        <input type="text" class="form-control" disabled name="jobClassName"
+                               ng-model="entity.jobClassName" placeholder="Class Name" required>
+                    </div>
+                </div>
+
+
+                <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">开始时间：</label>
+                    <div class="col-sm-9">
+                        <input class="form-control" name="description" disabled ng-model="entity.tigger.startTime"
+                               placeholder="Description" # required>
+                    </div>
+                </div>
+
+
+                <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">上一次执行时间：</label>
+                    <div class="col-sm-9">
+                        <input class="form-control" name="description" disabled
+                               ng-model="entity.tigger.previousFireTime" placeholder="Description" # required>
+                    </div>
+                </div>
+
+                <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">下一次执行时间：</label>
+                    <div class="col-sm-9">
+                        <input class="form-control" name="description" disabled ng-model="entity.tigger.nextFireTime"
+                               placeholder="Description" # required>
+                    </div>
+                </div>
+
+                <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">Cron表达式：</label>
+                    <div class="col-sm-9">
+                        <input class="form-control" name="cronExpression" disabled value=""
+                               ng-model="entity.tigger.cronExpression" placeholder="Cron Expression" required>
+                    </div>
+                </div>
+
+                <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">任务描述：</label>
+                    <div class="col-sm-9">
+                        <textarea class="form-control" cols="59" disabled rows="5">{{entity.description}}</textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" data-dismiss="modal" disabled aria-hidden="true">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- 增加邮件监听 -->
+<div class="modal fade" id="addEmailListenerModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h3 id="myModalLabel">增加邮件监听</h3>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">完整类名：</label>
+                    <div class="col-sm-9">
+                        <input type="text" class="form-control" disabled name="jobClassName"
+                               ng-model="addMailListenerEntity.jobClassName" placeholder="Class Name" required>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">任务组名：</label>
+                    <div class="col-sm-9">
+                        <input class="form-control" disabled name="jobGroup" ng-model="addMailListenerEntity.jobGroup"
+                               placeholder="Job Group" required>
+                    </div>
+                </div>
+
+
+                <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">任务描述：</label>
+                    <div class="col-sm-9">
+                        <textarea ng-model="addMailListenerEntity.description" class="form-control" cols="59"  rows="5"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group row">
+                    <div class="col-lg-6">
+                        <label class="col-form-label">正常结束时发送邮件提醒：</label>
+
+                        <input type="checkbox" class="checkbox-inline" ng-model="addMailListenerEntity.allowSendNormalEmail">
+                        {{addMailListenerEntity.allowSendNormalEmail}}
+                    </div>
+                    <div class="col-lg-6">
+                        <label class="col-form-label">异常结束时发送邮件提醒：</label>
+                        <input type="checkbox" class="checkbox-inline" ng-model="addMailListenerEntity.allowSendExceptionEmail">
+                        {{addMailListenerEntity.allowSendExceptionEmail}}
+                    </div>
+                </div>
+
+                <!-- 分配正常 执行邮件提醒人 -->
+                <div id="reciveNormalEmailPerson" class="form-group row ">
+                    <div>
+                        <label class="col-sm-6 col-form-label">任务正常结束时收件人：</label>
+                        <div class="col-sm-4">
+                            <a href="javascript:;" ng-click="addSuccessPerson()">增加</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="form-group row">
+                            <div class="col-lg-11">
+                                <table class="table-hover table">
+                                    <thead>
+                                    <tr>
+                                        <td>
+                                            邮件地址
+                                        </td>
+                                        <td>
+                                            收件人
+                                        </td>
+                                        <td>
+                                            操作
+                                        </td>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr ng-repeat="person in addMailListenerEntity.recivePersons.success track by $index">
+                                        <td class="form-group">
+                                            <input class="form-control" name="emailAddress"
+                                                   ng-model="person.emailAddress" placeholder="邮件地址" required>
+                                        </td>
+                                        <td class="form-group">
+                                            <input class="form-control" name="personName"
+                                                   ng-model="person.personName" placeholder="接收人" required>
+                                        </td>
+                                        <td class="form-group">
+                                            <a href="javascript:;" ng-click="deleteSuccessPerson($index)" class="btn btn-danger">移除</a>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- 分配异常邮件提醒人 -->
+                <div class="form-group row " id="reciveExceptionEmailPerson">
+                    <div>
+                        <label class="col-sm-6 col-form-label">任务异常结束时收件人：</label>
+                        <div class="col-sm-4">
+                            <a href="javascript:;" ng-click="addErrorPerson()">增加</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="form-group row">
+                            <div class="col-lg-11">
+                                <table class="table-hover table">
+                                    <thead>
+                                    <tr>
+                                        <td>
+                                            邮件地址
+                                        </td>
+                                        <td>
+                                            收件人
+                                        </td>
+                                        <td>
+                                            操作
+                                        </td>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr ng-repeat="person in addMailListenerEntity.recivePersons.error track by $index">
+                                        <td class="form-group">
+                                            <input class="form-control" name="emailAddress"
+                                                   ng-model="person.emailAddress" placeholder="邮件地址" required>
+                                        </td>
+                                        <td class="form-group">
+                                            <input class="form-control" name="personName" ng-model="person.personName"
+                                                   placeholder="接收人" required>
+                                        </td>
+                                        <td class="form-group">
+                                            <a href="javascript:;" ng-click="deleteErrorPerson($index)" class="btn btn-danger">移除</a>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-success" data-dismiss="modal" aria-hidden="true" ng-click="saveEmailListener()">保存</button>
+                <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- 新增加邮件监听 -->
+</body>
+</html>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD SQL Map Config 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<settings> 
+        <setting name="cacheEnabled" value="true" /><!-- 全局映射器启用缓存 -->   
+        <setting name="useGeneratedKeys" value="true" /> 
+        <setting name="defaultExecutorType" value="REUSE" />
+        <setting name="logImpl" value="STDOUT_LOGGING" /> 
+    </settings>
+
+
+    <!-- 配置通用 mapper -->
+    <!--
+        如果同时使用通用 mapper 和 PageHelper
+        我们应该讲 PageHelper 插件配置在前面,否则不能正常启动
+    -->
+    <plugins>
+
+        <plugin interceptor="com.github.pagehelper.PageInterceptor">
+            <!-- 开挂设置分页合理化 -->
+            <property name="reasonable" value="true"/>
+        </plugin>
+
+        <plugin interceptor="com.github.abel533.mapperhelper.MapperInterceptor">
+            <!--主键自增回写方法,默认值MYSQL,详细说明请看文档 -->
+            <property name="IDENTITY" value="MYSQL"/>
+            <!--通用Mapper接口，多个通用接口用逗号隔开 -->
+            <property name="mappers" value="com.github.abel533.mapper.Mapper"/>
+        </plugin>
+
+    </plugins>
+</configuration>

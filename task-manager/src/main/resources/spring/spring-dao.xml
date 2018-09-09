@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+		xmlns="http://www.springframework.org/schema/beans"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+		xmlns:context="http://www.springframework.org/schema/context"
+		xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+         http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+         
+	<!-- 配置整合Mybatis过程 -->
+	
+	<!-- 1：配置数据库相关参数properties属性：${url} -->
+	<context:property-placeholder location="classpath:application.properties"/>
+	
+	<!-- 启动spring注解 -->
+	<context:annotation-config/>
+
+	<!-- 阿里 druid数据库连接池 -->
+	<bean id="dataSourceForUmtask" class="com.alibaba.druid.pool.DruidDataSource" destroy-method="close">
+		<!-- 数据库基本信息配置 -->
+		<property name="url" value="${umtask.datasource.url}" />
+		<property name="username" value="${umtask.datasource.username}" />
+		<property name="password" value="${umtask.datasource.password}" />
+		<property name="driverClassName" value="${umtask.datasource.driverClassName}" />
+		<property name="filters" value="${datasource.filters}" />
+		<!-- 最大并发连接数 -->
+		<property name="maxActive" value="${datasource.maxActive}" />
+		<!-- 初始化连接数量 -->
+		<property name="initialSize" value="${datasource.initialSize}" />
+		<!-- 配置获取连接等待超时的时间 -->
+		<property name="maxWait" value="${datasource.maxWait}" />
+		<!-- 最小空闲连接数 -->
+		<property name="minIdle" value="${datasource.minIdle}" />
+		<!-- 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 -->
+		<property name="timeBetweenEvictionRunsMillis" value="${datasource.timeBetweenEvictionRunsMillis}" />
+		<!-- 配置一个连接在池中最小生存的时间，单位是毫秒 -->
+		<property name="minEvictableIdleTimeMillis" value="${datasource.minEvictableIdleTimeMillis}" />
+		<property name="validationQuery" value="${datasource.validationQuery}" />
+		<property name="testWhileIdle" value="${datasource.testWhileIdle}" />
+		<property name="testOnBorrow" value="${datasource.testOnBorrow}" />
+		<property name="testOnReturn" value="${datasource.testOnReturn}" />
+		<property name="maxOpenPreparedStatements" value="${datasource.maxOpenPreparedStatements}" />
+		<!-- 打开removeAbandoned功能 -->
+		<property name="removeAbandoned" value="${datasource.removeAbandoned}" />
+		<!-- 1800秒，也就是30分钟 -->
+		<property name="removeAbandonedTimeout" value="${datasource.removeAbandonedTimeout}" />
+		<!-- 关闭abanded连接时输出错误日志 -->
+		<property name="logAbandoned" value="${datasource.logAbandoned}" />
+	</bean>
+
+ 	
+ 	 <!-- 3:配置mybatis的SqlSessionFactory对象 -->
+	<!-- 配置 Sql Session Factory-->
+	<bean class="org.springframework.jdbc.datasource.DataSourceTransactionManager" id="transactionManager">
+		<property name="dataSource" ref="dataSourceForUmtask"></property>
+	</bean>
+
+
+	<!-- 配置spring 和mybatis 整合 -->
+	<!--配置 SqlSessionFactory -->
+	<bean class="org.mybatis.spring.SqlSessionFactoryBean" id="sqlSessionFactory">
+		<property name="dataSource" ref="dataSourceForUmtask"/>
+
+		<!-- 配置 mybatis 全局配置文件-->
+		<property name="configLocation" value="classpath:mybatis/config/mybatis-config.xml"/>
+
+		<!--配置扫描mapper 目录以及子目录 所有xml 文件 这里我们使用通用mapper 所以用不上了-->
+		<!-- <property name="mapperLocations" value="classpath:mappers/**/*.xml"/>-->
+
+		<!--配置别名-->
+		<property name="typeAliasesPackage" value="com.atguigu.manager.pojo"/>
+	</bean>
+
+
+	<!-- 扫描mapper -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<!-- 扫描mapper路径 -->
+		<property name="basePackage" value="com.snow.umtask.mapper"/>
+	</bean>
+</beans>
